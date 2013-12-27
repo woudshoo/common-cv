@@ -2,9 +2,9 @@
 (asdf:defsystem #:common-cv
   :serial t
   :depends-on (#:simple-utils
-	       #:main-thread
 	       #:alexandria
-	       #:cffi)
+	       #:cffi
+	       #+darwin #:main-thread)
   :components ((:file "library")
 	       (:file "package")
 	       (:file "macros")

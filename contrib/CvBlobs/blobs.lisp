@@ -5,6 +5,7 @@
        (file (su:cat lib-dir "libcvblob_wrap")))
   (unless (probe-file file)
     (su:run-program (su:cat "make -C " lib-dir) :output t :wait t))
+  #+linux (cffi:load-foreign-library "/usr/local/lib/libcvblob.so")
   (cffi:load-foreign-library file))
 
 (cffi:defcenum :blob-render-color-enum

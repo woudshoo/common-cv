@@ -69,13 +69,21 @@
   (let ((ref (cffi:foreign-funcall "cvQueryFrame" :pointer (ref capture) :pointer)))
     (reset-info-ipl-image (make-instance 'ipl-image :ref ref) )))
 
-(defmacro with-captured-camera ((name &optional (index -1)) &body body)
-  `(let ((,name (create-camera-capture ,index)))
+(defmacro with-captured-camera ((name dev-index &key width height) &body body)
+  `(let ((,name (create-camera-capture ,dev-index)))
+     (when ,width
+       (set-capture-property ,name :cv-cap-prop-frame-width ,width))
+     (when ,height
+       (set-capture-property ,name :cv-cap-prop-frame-height ,height))
      (unwind-protect (progn ,@body)
        (release-capture ,name))))
 
-(defmacro with-captured-file ((name file-path) &body body)
+(defmacro with-captured-file ((name file-path &key width height) &body body)
   `(let ((,name (create-file-capture ,file-path)))
+     (when ,width
+       (set-capture-property ,name :cv-cap-prop-frame-width ,width))
+     (when ,height
+       (set-capture-property ,name :cv-cap-prop-frame-height ,height))
      (unwind-protect (progn ,@body)
        (release-capture ,name))))
 

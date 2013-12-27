@@ -7,7 +7,7 @@ OBJS=cvblobs_wrap.o
 all : $(TARGET)
 
 $(TARGET) : $(OBJS)
-	c++ -dynamiclib -o $(TARGET) $(OBJS) $(CXXLDFLAGS)
+	c++ -shared -o $(TARGET) $(OBJS) $(CXXLDFLAGS)
 
 clean :
 	rm $(TARGET) $(OBJS)

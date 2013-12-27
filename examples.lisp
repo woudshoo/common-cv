@@ -1,13 +1,19 @@
+(ql:quickload :common-cv)
 
 (in-package :cl-user)
 
 (defparameter *examples-dir*
   (su:cat (su:full-pathname (asdf/system:system-source-directory :common-cv)) "examples-resources/"))
 
+(defmacro with-call-gui-thread (&body body)
+  #+darwin `(mt:call-in-main-thread nil
+ 	      ,@body)
+  #-darwin `(progn ,@body))
+
 (defun adaptive-threshold (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (cv:with-named-window ("adaptive-threshold")
-      (cv:with-captured-camera (vid cam)
+      (cv:with-captured-camera (vid cam :width 640 :height 480)
 	(loop
 	  (let* ((frame (cv:query-frame vid)))
 	    (cv:with-ipl-image ((img (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1))
@@ -28,9 +34,9 @@
 	 (data (cv:data mat)))
     (dotimes (i 25)
       (setf (cffi:mem-aref data :double i) (nth i filter-5x5)))
-    (mt:call-in-main-thread nil
+    (with-call-gui-thread
       (cv:with-named-window ("filter-mat")
-	(cv:with-captured-camera (vid cam)
+	(cv:with-captured-camera (vid cam :width 640 :height 480)
 	  (loop
 	    (let* ((frame (cv:query-frame vid)))
 	      (cv:with-ipl-image ((img (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 3))
@@ -43,27 +49,27 @@
 
 ;;; copy-make-border
 (defun make-border (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (cv:with-named-window ("MakeBorder")
-      (cv:with-captured-camera (vid cam)
+      (cv:with-captured-camera (vid cam :width 640 :height 480)
 	(loop
 	  (let* ((frame (cv:query-frame vid)))
 	    (cv:with-ipl-image ((dst (cv:size (+ (cv:width frame) (* 2 2))
 					      (+ (cv:height frame) (* 2 2))) :ipl-depth-8u 3))
 	      (cv:show-image "MakeBorder" (progn
-					 (cv:copy-make-border frame dst (cv:point 2 2)
-							      :ipl-border-constant
-							      (cv:scalar 200))
-					 dst))))
+					    (cv:copy-make-border frame dst (cv:point 2 2)
+								 :ipl-border-constant
+								 (cv:scalar 200))
+					    dst))))
 	  (let ((c (cv:wait-key 33)))
 	    (when (= c 27)
 	      (return))))))))
 
 ;;; sobel
 (defun sobel (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (cv:with-named-window ("Sobel")
-      (cv:with-captured-camera (vid cam)
+      (cv:with-captured-camera (vid cam :width 640 :height 480)
 	(loop
 	  (let* ((frame (cv:query-frame vid)))
 	    (cv:with-ipl-image ((cvt (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
@@ -81,9 +87,9 @@
 
 ;;; laplace
 (defun laplace (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (cv:with-named-window ("laplace")
-      (cv:with-captured-camera (vid cam)
+      (cv:with-captured-camera (vid cam :width 640 :height 480)
 	(loop
 	  (let* ((frame (cv:query-frame vid)))
 	    (cv:with-ipl-image ((cvt (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
@@ -102,9 +108,9 @@
 
 ;;; canny
 (defun canny (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (cv:with-named-window ("canny")
-      (cv:with-captured-camera (vid cam)
+      (cv:with-captured-camera (vid cam :width 640 :height 480)
 	(loop
 	  (let* ((frame (cv:query-frame vid)))
 	    (cv:with-ipl-image ((src (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
@@ -119,15 +125,15 @@
 
 ;;; affine
 (defun affine (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (let ((src-tri (list (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0)))
 	  (dst-tri (list (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0)))
 	  (rot-mat (cv:create-mat 2 3 :cv-32fc1))
 	  (warp-mat (cv:create-mat 2 3 :cv-32fc1))
 	  (dst nil))
       (cv:with-named-window ("affine")
-	(cv:with-captured-camera (vid cam)
-	  (loop
+	(cv:with-captured-camera (vid cam :width 640 :height 480)
+ 	  (loop
 	    (let ((src (cv:query-frame vid)))
 	      (unless dst
 		(setf dst (cv:create-image (cv:size (cv:width src) (cv:height src)) :ipl-depth-8u 3))
@@ -157,13 +163,13 @@
 
 ;;; perspective
 (defun perspective (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (let ((src-quad (list (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0)))
 	  (dst-quad (list (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0) (cv:point-2d-32f 0 0)))
 	  (warp-mat (cv:create-mat 3 3 :cv-32fc1))
 	  (dst nil))
       (cv:with-named-window ("pers")
-	(cv:with-captured-camera (vid cam)
+	(cv:with-captured-camera (vid cam :width 640 :height 480)
 	  (loop
 	    (let ((src (cv:query-frame vid)))
 	      (unless dst
@@ -193,10 +199,10 @@
 
 ;;; log-polar
 (defun log-polar (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (cv:with-named-window ("log-polar")
       (let ((m 10))
-	(cv:with-captured-camera (vid cam)
+	(cv:with-captured-camera (vid cam :width 640 :height 480)
 	  (loop
 	    (let* ((src (cv:query-frame vid)))
 	      (cv:with-ipl-image ((dst (cv:size (cv:width src) (cv:height src)) :ipl-depth-8u 3)
@@ -213,9 +219,9 @@
 
 ;;; dist-transform
 (defun dist-transform (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (cv:with-named-window ("dist-transform")
-      (cv:with-captured-camera (vid cam)
+      (cv:with-captured-camera (vid cam :width 640 :height 480)
 	(let ((frame (cv:query-frame vid)))
 	  (cv:with-ipl-image ((src (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
 			      (dst (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
@@ -234,9 +240,9 @@
 
 ;;; eqaulize-hist
 (defun equalize-hist (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (cv:with-named-window ("equalize-hist")
-      (cv:with-captured-camera (vid cam)
+      (cv:with-captured-camera (vid cam :width 640 :height 480)
 	(let ((frame (cv:query-frame vid)))
 	  (cv:with-ipl-image ((src (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
 			      (dst (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1))
@@ -251,10 +257,10 @@
 
 
 ;;; histogram
-(defun histogram-1 (&optional (cam -1))
-  (mt:call-in-main-thread nil
-    (cv:with-named-window ("histogram-1")
-      (cv:with-captured-camera (vid cam)
+(defun histogram (&optional (cam -1))
+  (with-call-gui-thread
+    (cv:with-named-window ("histogram")
+      (cv:with-captured-camera (vid cam :width 640 :height 480)
 	(let* ((h-bins 30)
 	       (s-bins 32)
 	       (hist (cv:create-hist 2 (list h-bins s-bins) :cv-hist-array (list (list 0 180) (list 0 255)) 1))
@@ -283,42 +289,15 @@
 				    (cv:point (* h 10) (* s 10))
 				    (cv:point (- (* (+ h 1) 10) 1) (- (* (+ s 1) 10) 1))
 				    (cv:scalar intensity intensity intensity) -1)))))
-	      (cv:show-image "histogram-1" hist-img)
+	      (cv:show-image "histogram" hist-img)
 	      (let ((c (cv:wait-key 33)))
 		(when (= c 27)
 		  (return)))))))))))
 
-(defun histogram-2 (&optional (cam -1))
-  (mt:call-in-main-thread nil
-    (cv:with-named-window ("histogram-2")
-      (cv:with-captured-camera (vid cam)
-	(let* ((h-bins 30)
-	       (s-bins 32)
-	       (hist (cv:create-hist 2 (list h-bins s-bins) :cv-hist-array (list (list 0 180) (list 0 255)) 1))
-	       (frame (cv:query-frame vid)))
-	  (cv:with-ipl-image ((hsv (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 3)
-			      (h-plane (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
-			      (s-plane (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
-			      (v-plane (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
-			      (back-img (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1))
-	    (loop
-	      (let* ((frame (cv:query-frame vid)))
-		(cv:cvt-color frame hsv :cv-bgr-2-hsv)
-		(cv::reset-info-ipl-image hsv)
-		(cv:cvt-pix-to-plane hsv h-plane s-plane v-plane nil)
-		(cv:calc-hist (list h-plane s-plane) hist 0)
-		(cv:normalize-hist hist (* 255 20))
-		(cv:calc-back-project (list h-plane s-plane) back-img hist)
-		(cv:normalize-hist hist 1.0)
-		(cv:show-image "histogram-2" back-img)
-		(let ((c (cv:wait-key 33)))
-		  (when (= c 27)
-		    (return)))))))))))
-
 
 ;;; back-project
 (defun back-project ()
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (cv:with-named-window ("calcbackproject")
       (let* ((h-bins 30)
 	     (s-bins 32)
@@ -347,11 +326,11 @@
 
 ;;; match-template
 (defun match-template (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (let* ((temp (cv:load-image (su:cat *examples-dir* "room7_temp.png") :cv-load-image-color)))
       (cv:with-named-window ("match")
 	(cv:with-named-window ("cam")
-	  (cv:with-captured-camera (vid cam)
+	  (cv:with-captured-camera (vid cam :width 640 :height 480)
 	    (let* ((frame (cv:query-frame vid))
 		   (src (cv:create-image (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 3))
 		   (result (cv:create-image (cv:size (+ (- (cv:width src) (cv:width temp)) 1)
@@ -371,10 +350,10 @@
 
 ;;; find contours
 (defun find-contours-1 (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (let* ((mem-storage (cv:create-mem-storage)))
       (cv:with-named-window ("find-contours-1")
-	(cv:with-captured-camera (vid cam)
+	(cv:with-captured-camera (vid cam :width 640 :height 480)
 	  (let ((frame (cv:query-frame vid)))
 	    (cv:with-ipl-image ((result (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1))
 	      (loop
@@ -390,12 +369,12 @@
 		    (return))))
 	      (cv:release-mem-storage mem-storage))))))))
 
-
+;;; in Linux... this function crash! I don't know why...
 (defun find-contours-2 (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (let* ((mem-storage (cv:create-mem-storage)))
       (cv:with-named-window ("find-contours-2")
-	(cv:with-captured-camera (vid cam)
+	(cv:with-captured-camera (vid cam :width 640 :height 480)
 	  (let ((frame (cv:query-frame vid)))
 	    (cv:with-ipl-image ((result (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1)
 				(ret (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 3))
@@ -418,11 +397,11 @@
 
 ;;; find face
 (defun face-detect (&optional (cam -1))
-  (mt:call-in-main-thread nil
+  (with-call-gui-thread
     (let* ((mem-storage (cv:create-mem-storage))
 	   (cascade (cv:load-haar-cascade (su:cat *examples-dir* "haarcascade_frontalface_default.xml"))))
       (cv:with-named-window ("Face Detect")
-	(cv:with-captured-camera (vid cam)
+	(cv:with-captured-camera (vid cam :width 640 :height 480)
 	  (let ((frame (cv:query-frame vid)))
 	    (cv:with-ipl-image ((result (cv:size (cv:width frame) (cv:height frame)) :ipl-depth-8u 1))
 	      (loop
@@ -441,3 +420,47 @@
 		  (when (= c 27)
 		    (return))))
 	      (cv:release-mem-storage mem-storage))))))))
+
+
+;;; cvblob
+(ql:quickload :cvblob)
+
+(defun red-object-tracking (&optional (cam -1))
+  (with-call-gui-thread
+    (let* ((morph-kernel (cv:create-structuring-element-ex 5 5 1 1 :cv-shape-rect)))
+      (cv:with-named-window ("red_object_tracking")
+	(cv:with-captured-camera (vid cam :width 640 :height 480)
+	  (cv:with-cv-tracks (tracks)
+	    (let* ((img (cv:query-frame vid))
+		   (frame (cv:create-image (cv:size (cv:width img) (cv:height img)) :ipl-depth-8u 3)))
+	      (loop
+		(let ((img (cv:query-frame vid)))
+		  (cv:convert-scale img frame 1 0)
+		  (cv:with-cv-blobs (blobs)
+		    (let ((width (cv:width img))
+			  (height (cv:height img)))
+		      (cv:with-ipl-image ((segmentated (cv:size width height) :ipl-depth-8u 1)
+					  (label-img (cv:size width height) :ipl-depth-label 1))
+			(let ((frame-data (cv:image-data frame))
+			      (segmentated-data (cv:image-data segmentated)))
+			  (dotimes (j height)
+			    (dotimes (i width)
+			      (let* ((b (/ (cffi:mem-aref frame-data :unsigned-char (+ (+ (* 3 i) (* 3 j width)) 0)) 255.0))
+				     (g (/ (cffi:mem-aref frame-data :unsigned-char (+ (+ (* 3 i) (* 3 j width)) 1)) 255.0))
+				     (r (/ (cffi:mem-aref frame-data :unsigned-char (+ (+ (* 3 i) (* 3 j width)) 2)) 255.0))
+				     (f (* 255 (if (cl:and (> r (+ 0.2 g)) (> r (+ 0.2 b))) 1 0))))
+				(setf (cffi:mem-aref segmentated-data :unsigned-char (+ i (* j width))) f)))))
+			(cv:morphology-ex segmentated segmentated nil morph-kernel :cv-mop-open 1)
+			(cv:label segmentated label-img blobs)
+			(cv:filter-by-area blobs 500 1000000)
+			(cv:render-blobs label-img blobs frame frame :cv-blob-render-bounding-box)
+			(cv:update-tracks blobs tracks 200. 5)
+			(cv:render-tracks tracks frame frame '(:cv-track-render-id
+							       :cv-track-render-bounding-box))
+			(cv:show-image "red_object_tracking" frame)
+			(cv:release-blobs blobs)))))
+		(let ((c (cv:wait-key 33)))
+		  (when (= c 27)
+		    (return))))
+	      (cv:release-structuring-element morph-kernel)
+	      (cv:release-image frame))))))))
