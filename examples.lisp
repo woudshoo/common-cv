@@ -5,10 +5,20 @@
 (defparameter *examples-dir*
   (su:cat (su:full-pathname (asdf/system:system-source-directory :common-cv)) "examples-resources/"))
 
+(defmacro with-masked-float-traps (&body body)
+  "Wraps BODY in code which masks float traps.
+This is needed in SBCL on OSX because native code often
+generate :inexact traps and land you in the debugger.
+
+For non SBCL this wraps body in a progn."
+  #+sbcl `(sb-int:with-float-traps-masked (:invalid)
+	    ,@body)
+  #-sbcl `(progn ,@body))
+
 (defmacro with-call-gui-thread (&body body)
   #+darwin `(mt:call-in-main-thread nil
- 	      ,@body)
-  #-darwin `(progn ,@body))
+	      (with-masked-float-traps ,@body))
+  #-darwin `(with-masked-float-traps ,@body))
 
 (defun adaptive-threshold (&optional (cam -1))
   (with-call-gui-thread
